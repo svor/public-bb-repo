@@ -16,6 +16,12 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+    - name: Create package.json
+      run: |
+        echo '{}' > package.json
+
+    - name: Install @octokit/rest
+      run: npm install @octokit/rest
 
     - name: Add Label "status/need-triage" if no label starting with "severity" exists
       run: |
