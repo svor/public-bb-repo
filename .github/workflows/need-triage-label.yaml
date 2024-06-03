@@ -19,31 +19,28 @@ jobs:
     - name: Create package.json
       run: |
         echo '{}' > package.json
-
     - name: Install @octokit/rest
       run: npm install @octokit/rest
 
     - name: Add Label "status/need-triage" if no label starting with "severity" exists
+      env:
+        GITHUB_TOKEN: ${{ secrets.CHE_BOT_GITHUB_TOKEN }}
       run: |
         node -e "
         const { Octokit } = require('@octokit/rest');
         const octokit = new Octokit({ auth: process.env.CHE_BOT_GITHUB_TOKEN });
-
         const owner = '${{ github.repository_owner }}';
         const repo = '${{ github.event.repository.name }}';
         const issue_number = ${{ github.event.issue.number }};
         const labelPrefix = 'severity';
         const labelToAdd = 'status/need-triage';
-
         (async () => {
           const { data: issue } = await octokit.issues.get({
             owner,
             repo,
             issue_number,
           });
-
           const hasSeverityLabel = issue.labels.some(label => label.name.startsWith(labelPrefix));
-
           if (!hasSeverityLabel) {
             await octokit.issues.addLabels({
               owner,
@@ -54,5 +51,3 @@ jobs:
           }
         })();
         "
-      env:
-        GITHUB_TOKEN: ${{ secrets.CHE_BOT_GITHUB_TOKEN }}
