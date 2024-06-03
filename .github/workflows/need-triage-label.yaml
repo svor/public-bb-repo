@@ -1,41 +1,18 @@
-name: Label New Issues
-
+name: Label issues
 on:
   issues:
-    types: [opened]
-
+    types:
+      - reopened
+      - opened
 jobs:
-  label-issue:
+  label_issues:
     runs-on: ubuntu-latest
-
+    permissions:
+      issues: write
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Set up jq
-      run: sudo apt-get install -y jq
-
-    - name: Check and Add Label
-      env:
-        GITHUB_TOKEN: ${{ secrets.CHE_BOT_GITHUB_TOKEN }}
-      run: |
-        ISSUE_URL="${{ github.event.issue.url }}"
-        ISSUE_NUMBER="${{ github.event.issue.number }}"
-        REPO="${{ github.repository }}"
-        LABEL_TO_ADD="Label A"
-        LABEL_PREFIX="severity"
-
-        # Get the issue labels
-        ISSUE_LABELS=$(curl -s -H "Authorization: token ${CHE_BOT_GITHUB_TOKEN}" "$ISSUE_URL" | jq -r '.labels[].name')
-
-        # Check if any label starts with 'severity'
-        if echo "$ISSUE_LABELS" | grep -q "^$LABEL_PREFIX"; then
-          echo "A label starting with '$LABEL_PREFIX' exists. No action needed."
-        else
-          echo "No label starting with '$LABEL_PREFIX' found. Adding '$LABEL_TO_ADD'."
-          # Add the label to the issue
-          curl -s -H "Authorization: token ${CHE_BOT_GITHUB_TOKEN}" \
-               -X POST \
-               -d "{\"labels\": [\"$LABEL_TO_ADD\"]}" \
-               "https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER/labels"
-        fi
+      - run: gh issue edit "$NUMBER" --add-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.CHE_BOT_GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: triage
