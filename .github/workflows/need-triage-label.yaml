@@ -12,9 +12,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Install GitHub CLI
-      uses: actions/setup-gh@v3
-
     - name: Add Label "status/need-triage" if no label starting with "severity" exists
       env:
         GITHUB_TOKEN: ${{ secrets.CHE_BOT_GITHUB_TOKEN }}
