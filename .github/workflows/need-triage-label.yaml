@@ -1,4 +1,4 @@
-name: need-triage Label
+name: Label New Issues
 
 on:
   issues:
@@ -10,44 +10,32 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    - name: Create package.json
-      run: |
-        echo '{}' > package.json
-    - name: Install @octokit/rest
-      run: npm install @octokit/rest
+    - name: Set up jq
+      run: sudo apt-get install -y jq
 
-    - name: Add Label "status/need-triage" if no label starting with "severity" exists
+    - name: Check and Add Label
       env:
         GITHUB_TOKEN: ${{ secrets.CHE_BOT_GITHUB_TOKEN }}
       run: |
-        node -e "
-        const { Octokit } = require('@octokit/rest');
-        const octokit = new Octokit({ auth: process.env.CHE_BOT_GITHUB_TOKEN });
-        const owner = '${{ github.repository_owner }}';
-        const repo = '${{ github.event.repository.name }}';
-        const issue_number = ${{ github.event.issue.number }};
-        const labelPrefix = 'severity';
-        const labelToAdd = 'status/need-triage';
-        (async () => {
-          const { data: issue } = await octokit.issues.get({
-            owner,
-            repo,
-            issue_number,
-          });
-          const hasSeverityLabel = issue.labels.some(label => label.name.startsWith(labelPrefix));
-          if (!hasSeverityLabel) {
-            await octokit.issues.addLabels({
-              owner,
-              repo,
-              issue_number,
-              labels: [labelToAdd],
-            });
-          }
-        })();
-        "
+        ISSUE_URL="${{ github.event.issue.url }}"
+        ISSUE_NUMBER="${{ github.event.issue.number }}"
+        REPO="${{ github.repository }}"
+        LABEL_TO_ADD="Label A"
+        LABEL_PREFIX="severity"
+
+        # Get the issue labels
+        ISSUE_LABELS=$(curl -s -H "Authorization: token ${CHE_BOT_GITHUB_TOKEN}" "$ISSUE_URL" | jq -r '.labels[].name')
+
+        # Check if any label starts with 'severity'
+        if echo "$ISSUE_LABELS" | grep -q "^$LABEL_PREFIX"; then
+          echo "A label starting with '$LABEL_PREFIX' exists. No action needed."
+        else
+          echo "No label starting with '$LABEL_PREFIX' found. Adding '$LABEL_TO_ADD'."
+          # Add the label to the issue
+          curl -s -H "Authorization: token ${CHE_BOT_GITHUB_TOKEN}" \
+               -X POST \
+               -d "{\"labels\": [\"$LABEL_TO_ADD\"]}" \
+               "https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER/labels"
+        fi
